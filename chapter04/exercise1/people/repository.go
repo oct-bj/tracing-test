@@ -3,6 +3,7 @@ package people
 import (
 	"database/sql"
 	"log"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/shunfenger-tech/tracing-test/chapter04/lib/model"
 )
 

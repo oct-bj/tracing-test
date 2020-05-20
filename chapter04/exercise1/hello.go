@@ -20,7 +20,7 @@ func main(){
 }
 
 func handleSayHello(w http.ResponseWriter, r *http.Request){
-	name := strings.TrimPrefix(r.URL.Path, "/sayHello")
+	name := strings.TrimPrefix(r.URL.Path, "/sayHello/")
 	greeting, err := SayHello(name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
