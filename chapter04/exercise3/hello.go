@@ -4,6 +4,7 @@ import (
 	"log"
 	"strings"
 	"net/http"
+	"context"
 	otlog "github.com/opentracing/opentracing-go/log"
 	"github.com/shunfenger-tech/tracing-test/chapter04/exercise3/people"
 	"github.com/opentracing/opentracing-go"
@@ -31,9 +32,10 @@ func main(){
 func handleSayHello(w http.ResponseWriter, r *http.Request){
 	span := opentracing.GlobalTracer().StartSpan("say-hello")
 	defer span.Finish()
+	context := opentracing.ContextWithSpan(r.Context(), span)
 
 	name := strings.TrimPrefix(r.URL.Path, "/sayHello/")
-	greeting, err := SayHello(name, span)
+	greeting, err := SayHello(context, name)
 	if err != nil {
 		span.SetTag("error", true)
 		span.LogFields(otlog.Error(err))
@@ -46,26 +48,26 @@ func handleSayHello(w http.ResponseWriter, r *http.Request){
 	w.Write([]byte(greeting))
 }
 
-func SayHello(name string, span opentracing.Span) (string, error){
-	person, err := repo.GetPerson(name, span)
+func SayHello(context context.Context, name string) (string, error){
+	person, err := repo.GetPerson(context, name)
 	if err!= nil {
 		return "", err
 	}
 
-	span.LogKV("name", person.Name,
+	opentracing.SpanFromContext(context).LogKV("name", person.Name,
 		"title", person.Title,
 		"description", person.Description)
 
 	return FormatGreeting(
+		context,
 		person.Name,
 		person.Title,
 		person.Description,
-		span,
 	), nil
 }
 
-func FormatGreeting(name, title, description string, span opentracing.Span) string {
-	span = opentracing.GlobalTracer().StartSpan("format-greeting", opentracing.ChildOf(span.Context()))
+func FormatGreeting(context context.Context, name, title, description string) string {
+	span, context := opentracing.StartSpanFromContext(context,"format-greeting")
 	defer span.Finish()
 
 	response := "Hello, "

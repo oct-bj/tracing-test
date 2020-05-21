@@ -1,6 +1,7 @@
 package people
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	_ "github.com/go-sql-driver/mysql"
@@ -30,15 +31,14 @@ func NewRepository() *Repository {
 	}
 }
 
-func (r *Repository) GetPerson(name string, span opentracing.Span) (model.Person, error){
+func (r *Repository) GetPerson(ctx context.Context, name string) (model.Person, error){
 	query := "SELECT title, description FROM people WHERE name=?"
 
-	span = opentracing.GlobalTracer().StartSpan("get-person",
-		opentracing.ChildOf(span.Context()),
+	span, ctx := opentracing.StartSpanFromContext(ctx, "get-person",
 		opentracing.Tag{Key: "db.statement", Value: query})
 	defer span.Finish()
 
-	rows, err := r.db.Query(query, name)
+	rows, err := r.db.QueryContext(ctx, query, name)
 	if err!= nil {
 		return model.Person{}, err
 	}
@@ -46,7 +46,7 @@ func (r *Repository) GetPerson(name string, span opentracing.Span) (model.Person
 
 	for rows.Next() {
 		var title, descr string
-		err := rows.Scan(&title, &descr)
+		err := rows.Scan(ctx, &title, &descr)
 		if err != nil {
 			return model.Person{}, err
 		}
